@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CIS Hardening Report — {{ ansible_hostname }}</title>
+  <title>CIS Hardening Report — {{ ansible_facts['hostname'] }}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -265,23 +265,23 @@
       <div class="meta-grid">
         <div class="meta-item">
           <label>Hostname</label>
-          <span>{{ ansible_hostname }}</span>
+          <span>{{ ansible_facts['hostname'] }}</span>
         </div>
         <div class="meta-item">
           <label>IP Address</label>
-          <span>{{ ansible_default_ipv4.address | default('N/A') }}</span>
+          <span>{{ ansible_facts['default_ipv4']['address'] | default('N/A') }}</span>
         </div>
         <div class="meta-item">
           <label>Operating System</label>
-          <span>{{ ansible_distribution }} {{ ansible_distribution_version }}</span>
+          <span>{{ ansible_facts['distribution'] }} {{ ansible_facts['distribution_version'] }}</span>
         </div>
         <div class="meta-item">
           <label>Kernel</label>
-          <span>{{ ansible_kernel }}</span>
+          <span>{{ ansible_facts['kernel'] }}</span>
         </div>
         <div class="meta-item">
           <label>Report Date</label>
-          <span>{{ ansible_date_time.iso8601 }}</span>
+          <span>{{ ansible_facts['date_time']['iso8601'] }}</span>
         </div>
       </div>
     </header>
@@ -352,7 +352,7 @@
     <!-- Footer -->
     <footer>
       <span>ansible-linux-hardening · fo:sabatino · fo:platform-engineering</span>
-      <span>{{ ansible_date_time.iso8601 }}</span>
+      <span>{{ ansible_facts['date_time']['iso8601'] }}</span>
     </footer>
 
   </div>

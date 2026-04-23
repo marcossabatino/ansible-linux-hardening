@@ -13,7 +13,7 @@
   gather_facts: true
   vars:
     report_output_dir: "/tmp/cis_reports"
-    report_timestamp: "{{ ansible_date_time.iso8601_basic_short }}"
+    report_timestamp: "{{ ansible_facts['date_time']['iso8601_basic_short'] }}"
 
   tasks:
     - name: "AUDIT | Initialize compliance results"
@@ -139,7 +139,7 @@
     - name: "AUDIT | Render plain-text compliance report"
       ansible.builtin.template:
         src: "{{ playbook_dir }}/../roles/cis_hardening/templates/report.txt.j2"
-        dest: "{{ report_output_dir }}/cis_report_{{ ansible_hostname }}_{{ report_timestamp }}.txt"
+        dest: "{{ report_output_dir }}/cis_report_{{ ansible_facts['hostname'] }}_{{ report_timestamp }}.txt"
         owner: root
         group: root
         mode: "0644"
@@ -147,21 +147,21 @@
     - name: "AUDIT | Render HTML compliance report"
       ansible.builtin.template:
         src: "{{ playbook_dir }}/../roles/cis_hardening/templates/report.html.j2"
-        dest: "{{ report_output_dir }}/cis_report_{{ ansible_hostname }}_{{ report_timestamp }}.html"
+        dest: "{{ report_output_dir }}/cis_report_{{ ansible_facts['hostname'] }}_{{ report_timestamp }}.html"
         owner: root
         group: root
         mode: "0644"
 
     - name: "AUDIT | Fetch plain-text report to control node"
       ansible.builtin.fetch:
-        src: "{{ report_output_dir }}/cis_report_{{ ansible_hostname }}_{{ report_timestamp }}.txt"
-        dest: "reports/"
+        src: "{{ report_output_dir }}/cis_report_{{ ansible_facts['hostname'] }}_{{ report_timestamp }}.txt"
+        dest: "{{ playbook_dir }}/../reports/"
         flat: true
 
     - name: "AUDIT | Fetch HTML report to control node"
       ansible.builtin.fetch:
-        src: "{{ report_output_dir }}/cis_report_{{ ansible_hostname }}_{{ report_timestamp }}.html"
-        dest: "reports/"
+        src: "{{ report_output_dir }}/cis_report_{{ ansible_facts['hostname'] }}_{{ report_timestamp }}.html"
+        dest: "{{ playbook_dir }}/../reports/"
         flat: true
 
     - name: "AUDIT | Print compliance summary"
@@ -170,10 +170,10 @@
           - "╔══════════════════════════════════════════════╗"
           - "║         CIS AUDIT SUMMARY (READ-ONLY)        ║"
           - "╠══════════════════════════════════════════════╣"
-          - "║  Host   : {{ ansible_hostname | ljust(34) }} ║"
-          - "║  Total  : {{ total_count | string | ljust(34) }} ║"
-          - "║  PASS   : {{ pass_count | string | ljust(34) }} ║"
-          - "║  FAIL   : {{ fail_count | string | ljust(34) }} ║"
-          - "║  Score  : {{ compliance_pct | string + '%' | ljust(34) }} ║"
+          - "║  Host   : {{ (ansible_facts['hostname'] | string) + ' ' * (34 - (ansible_facts['hostname'] | string | length)) }} ║"
+          - "║  Total  : {{ (total_count | string) + ' ' * (34 - (total_count | string | length)) }} ║"
+          - "║  PASS   : {{ (pass_count | string) + ' ' * (34 - (pass_count | string | length)) }} ║"
+          - "║  FAIL   : {{ (fail_count | string) + ' ' * (34 - (fail_count | string | length)) }} ║"
+          - "║  Score  : {{ (compliance_pct | string + '%') + ' ' * (34 - ((compliance_pct | string + '%') | length)) }} ║"
           - "╚══════════════════════════════════════════════╝"
           - "Reports saved to: reports/"

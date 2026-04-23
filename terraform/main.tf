@@ -67,11 +67,11 @@ resource "aws_key_pair" "cis_lab" {
 
 resource "aws_security_group" "cis_lab" {
   name        = "${var.project_name}-sg"
-  description = "Allow SSH inbound; all outbound — CIS hardening lab"
+  description = "Allow SSH inbound; all outbound CIS hardening lab"
   vpc_id      = data.aws_vpc.default.id
 
   ingress {
-    description = "SSH access — restrict allowed_ssh_cidr to your IP in production"
+    description = "SSH access restrict allowed_ssh_cidr to your IP in production"
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
@@ -79,7 +79,7 @@ resource "aws_security_group" "cis_lab" {
   }
 
   egress {
-    description = "Allow all outbound — required for apt package installation"
+    description = "Allow all outbound - required for apt package installation"
     from_port   = 0
     to_port     = 0
     protocol    = "-1"

@@ -1,11 +1,11 @@
 ================================================================================
 CIS BENCHMARK HARDENING REPORT — LEVEL 1 (Ubuntu 22.04 LTS)
 ================================================================================
-Host          : {{ ansible_hostname }}
-IP Address    : {{ ansible_default_ipv4.address | default('N/A') }}
-OS            : {{ ansible_distribution }} {{ ansible_distribution_version }}
-Kernel        : {{ ansible_kernel }}
-Date          : {{ ansible_date_time.iso8601 }}
+Host          : {{ ansible_facts['hostname'] }}
+IP Address    : {{ ansible_facts['default_ipv4']['address'] | default('N/A') }}
+OS            : {{ ansible_facts['distribution'] }} {{ ansible_facts['distribution_version'] }}
+Kernel        : {{ ansible_facts['kernel'] }}
+Date          : {{ ansible_facts['date_time']['iso8601'] }}
 ================================================================================
 
 COMPLIANCE SUMMARY
@@ -21,7 +21,8 @@ COMPLIANCE SUMMARY
 DETAILED RESULTS
 ================================================================================
 {% for result in compliance_results %}
-  [{{ result.status }}]  {{ result.id | ljust(14) }} {{ result.title }}
+{% set padded_id = (result.id | string) + ' ' * (14 - (result.id | string | length)) %}
+  [{{ result.status }}]  {{ padded_id }} {{ result.title }}
 {% endfor %}
 
 ================================================================================
