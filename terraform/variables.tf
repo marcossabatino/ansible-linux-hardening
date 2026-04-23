@@ -25,13 +25,13 @@ variable "managed_node_count" {
 variable "public_key_path" {
   description = "Path to SSH public key uploaded to AWS as a key pair"
   type        = string
-  default     = "~/.ssh/id_rsa.pub"
+  default     = "~/.ssh/cis_hardening.pub"
 }
 
 variable "private_key_path" {
   description = "Path to SSH private key written into the generated Ansible inventory"
   type        = string
-  default     = "~/.ssh/id_rsa"
+  default     = "~/.ssh/cis_hardening"
 }
 
 variable "allowed_ssh_cidr" {

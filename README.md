@@ -97,7 +97,7 @@ cd ansible-linux-hardening
 ### Step 2 — Generate SSH key pair
 
 ```bash
-ssh-keygen -t rsa -b 4096 -f ~/.ssh/cis_hardening_lab -N ""
+ssh-keygen -t rsa -b 4096 -f ~/.ssh/cis_hardening -N ""
 ```
 
 ### Step 3 — Provision infrastructure with Terraform
@@ -106,12 +106,12 @@ ssh-keygen -t rsa -b 4096 -f ~/.ssh/cis_hardening_lab -N ""
 cd terraform
 terraform init
 terraform plan \
-  -var="public_key_path=~/.ssh/cis_hardening_lab.pub" \
-  -var="private_key_path=~/.ssh/cis_hardening_lab"
+  -var="public_key_path=~/.ssh/cis_hardening.pub" \
+  -var="private_key_path=~/.ssh/cis_hardening"
 
 terraform apply \
-  -var="public_key_path=~/.ssh/cis_hardening_lab.pub" \
-  -var="private_key_path=~/.ssh/cis_hardening_lab" \
+  -var="public_key_path=~/.ssh/cis_hardening.pub" \
+  -var="private_key_path=~/.ssh/cis_hardening" \
   -auto-approve
 cd ..
 ```
@@ -125,7 +125,7 @@ Outputs:
 
 control_node_public_ip     = "54.211.x.x"
 managed_nodes_public_ips   = ["54.211.y.y", "54.211.z.z"]
-ssh_control_node           = "ssh -i ~/.ssh/cis_hardening_lab ubuntu@54.211.x.x"
+ssh_control_node           = "ssh -i ~/.ssh/cis_hardening ubuntu@54.211.x.x"
 monthly_cost_estimate      = "t3.micro: ~$8.47/month ..."
 ```
 
@@ -357,8 +357,8 @@ All AWS resources provisioned by Terraform carry these mandatory tags:
 ```bash
 cd terraform
 terraform destroy \
-  -var="public_key_path=~/.ssh/cis_hardening_lab.pub" \
-  -var="private_key_path=~/.ssh/cis_hardening_lab" \
+  -var="public_key_path=~/.ssh/cis_hardening.pub" \
+  -var="private_key_path=~/.ssh/cis_hardening" \
   -auto-approve
 ```
 
