@@ -1,0 +1,87 @@
+---
+# ─── Report Settings ──────────────────────────────────────────────────────────
+# Remote directory where reports are written before being fetched to the control
+report_output_dir: "/tmp/cis_reports"
+# iso8601_basic_short produces compact timestamps like 20240423T142030 — safe for filenames
+report_timestamp: "{{ ansible_date_time.iso8601_basic_short }}"
+
+# ─── SSH Hardening (CIS 5.2) ──────────────────────────────────────────────────
+ssh_port: 22
+ssh_permit_root_login: "no"
+ssh_password_authentication: "no"
+# 4 retries balances usability with brute-force resistance (CIS recommends <= 4)
+ssh_max_auth_tries: 4
+# 300 s idle timeout disconnects abandoned sessions per CIS 5.2.19
+ssh_client_alive_interval: 300
+# 0 = disconnect after exactly one missed keepalive (tightest setting)
+ssh_client_alive_count_max: 0
+ssh_login_grace_time: 60
+# TCP forwarding disabled to prevent SSH tunneling that bypasses firewall rules
+ssh_allow_tcp_forwarding: "no"
+ssh_x11_forwarding: "no"
+# Protocol 1 has known vulnerabilities; force Protocol 2 per CIS 5.2.2
+ssh_protocol: 2
+
+# ─── Password Policy (CIS 5.4) ────────────────────────────────────────────────
+# 365 days maximum satisfies CIS while remaining practical for key-based-auth environments
+password_max_days: 365
+password_min_days: 7
+password_warn_age: 7
+# 14 characters is the CIS Level 1 minimum for password complexity
+password_min_length: 14
+
+# ─── Kernel / Network Hardening (CIS 3.x) ─────────────────────────────────────
+# Prevents this host from routing packets between interfaces (non-router nodes)
+disable_ip_forwarding: true
+# Blocks ICMP redirect messages that could be used to redirect traffic
+disable_send_redirects: true
+disable_source_route_acceptance: true
+# Drops ICMP redirect packets — prevents MITM via routing manipulation
+disable_icmp_redirects: true
+# Reverse path filtering rejects packets whose source IP is not reachable via the ingress interface
+enable_reverse_path_filtering: true
+# SYN cookies protect against SYN flood DDoS attacks
+enable_tcp_syn_cookies: true
+# Set false to keep IPv6 enabled — change to true only if IPv6 is unused on this host
+disable_ipv6: false
+
+# ─── Filesystem Module Hardening (CIS 1.1.1) ──────────────────────────────────
+# Rare filesystems are blocked via modprobe to shrink the kernel attack surface
+disable_cramfs: true
+disable_freevxfs: true
+disable_jffs2: true
+disable_hfs: true
+disable_hfsplus: true
+disable_udf: true
+
+# ─── Unnecessary Services to Disable (CIS 2.x) ────────────────────────────────
+# Each service is stopped and disabled; ignore_errors covers hosts where the
+# service was never installed (idempotent across minimal and full Ubuntu images)
+services_to_disable:
+  - avahi-daemon
+  - cups
+  - isc-dhcp-server
+  - isc-dhcp-server6
+  - slapd
+  - nfs-server
+  - rpcbind
+  - bind9
+  - vsftpd
+  - apache2
+  - dovecot
+  - smbd
+  - squid
+  - snmpd
+  - rsync
+
+# ─── Login Banner (CIS 1.7) ───────────────────────────────────────────────────
+# Legal warning banner — required by CIS 1.7.1 and many enterprise compliance frameworks
+login_banner: |
+  ****************************************************************************
+  *  AUTHORIZED ACCESS ONLY                                                  *
+  *  Unauthorized access is strictly prohibited.                             *
+  ****************************************************************************
+
+# ─── Logging Services ─────────────────────────────────────────────────────────
+rsyslog_enabled: true
+auditd_enabled: true

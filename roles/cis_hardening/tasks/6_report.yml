@@ -1,0 +1,65 @@
+---
+# CIS Section 6 — Compliance Report Generation
+# Runs with tag 'always' so reports are produced on every playbook execution,
+# including --check mode and partial tag runs.
+
+- name: "SECTION 6 | REPORT | Create report output directory on remote host"
+  ansible.builtin.file:
+    path: "{{ report_output_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: "SECTION 6 | REPORT | Calculate pass, fail, and total counts"
+  ansible.builtin.set_fact:
+    pass_count: "{{ compliance_results | selectattr('status', 'equalto', 'PASS') | list | length }}"
+    fail_count: "{{ compliance_results | selectattr('status', 'equalto', 'FAIL') | list | length }}"
+    total_count: "{{ compliance_results | length }}"
+
+- name: "SECTION 6 | REPORT | Calculate compliance percentage"
+  ansible.builtin.set_fact:
+    compliance_pct: "{{ ((pass_count | int / total_count | int) * 100) | round(1) }}"
+  when: total_count | int > 0
+
+- name: "SECTION 6 | REPORT | Render plain-text compliance report"
+  ansible.builtin.template:
+    src: report.txt.j2
+    dest: "{{ report_output_dir }}/cis_report_{{ ansible_hostname }}_{{ report_timestamp }}.txt"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: "SECTION 6 | REPORT | Render HTML compliance report"
+  ansible.builtin.template:
+    src: report.html.j2
+    dest: "{{ report_output_dir }}/cis_report_{{ ansible_hostname }}_{{ report_timestamp }}.html"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: "SECTION 6 | REPORT | Fetch plain-text report to control node"
+  ansible.builtin.fetch:
+    src: "{{ report_output_dir }}/cis_report_{{ ansible_hostname }}_{{ report_timestamp }}.txt"
+    dest: "reports/"
+    flat: true
+
+- name: "SECTION 6 | REPORT | Fetch HTML report to control node"
+  ansible.builtin.fetch:
+    src: "{{ report_output_dir }}/cis_report_{{ ansible_hostname }}_{{ report_timestamp }}.html"
+    dest: "reports/"
+    flat: true
+
+- name: "SECTION 6 | REPORT | Print compliance summary"
+  ansible.builtin.debug:
+    msg:
+      - "╔══════════════════════════════════════════════╗"
+      - "║       CIS BENCHMARK COMPLIANCE SUMMARY       ║"
+      - "╠══════════════════════════════════════════════╣"
+      - "║  Host   : {{ ansible_hostname | ljust(34) }} ║"
+      - "║  Total  : {{ total_count | string | ljust(34) }} ║"
+      - "║  PASS   : {{ pass_count | string | ljust(34) }} ║"
+      - "║  FAIL   : {{ fail_count | string | ljust(34) }} ║"
+      - "║  Score  : {{ compliance_pct | string + '%' | ljust(34) }} ║"
+      - "╚══════════════════════════════════════════════╝"
+      - "Reports saved to: reports/"

@@ -1,0 +1,159 @@
+---
+# CIS Section 3 — Network / Kernel sysctl Hardening
+# All settings are written to /etc/sysctl.d/99-cis-hardening.conf and applied
+# immediately via the reload sysctl handler. The 99- prefix ensures these
+# settings load last and override any distribution defaults.
+
+- name: "SECTION 3 | CIS-3.1.1 | Disable IP forwarding"
+  ansible.posix.sysctl:
+    name: net.ipv4.ip_forward
+    value: "0"
+    sysctl_file: /etc/sysctl.d/99-cis-hardening.conf
+    state: present
+    reload: true
+  when: disable_ip_forwarding
+  register: result_ip_forward
+  notify: reload sysctl
+
+- name: "SECTION 3 | CIS-3.2.2 | Disable sending ICMP redirects (all interfaces)"
+  ansible.posix.sysctl:
+    name: net.ipv4.conf.all.send_redirects
+    value: "0"
+    sysctl_file: /etc/sysctl.d/99-cis-hardening.conf
+    state: present
+    reload: true
+  when: disable_send_redirects
+  register: result_send_redirects_all
+  notify: reload sysctl
+
+- name: "SECTION 3 | CIS-3.2.2 | Disable sending ICMP redirects (default interface)"
+  ansible.posix.sysctl:
+    name: net.ipv4.conf.default.send_redirects
+    value: "0"
+    sysctl_file: /etc/sysctl.d/99-cis-hardening.conf
+    state: present
+    reload: true
+  when: disable_send_redirects
+  notify: reload sysctl
+
+- name: "SECTION 3 | CIS-3.2.1 | Disable source routed packet acceptance (all)"
+  ansible.posix.sysctl:
+    name: net.ipv4.conf.all.accept_source_route
+    value: "0"
+    sysctl_file: /etc/sysctl.d/99-cis-hardening.conf
+    state: present
+    reload: true
+  when: disable_source_route_acceptance
+  notify: reload sysctl
+
+- name: "SECTION 3 | CIS-3.2.1 | Disable source routed packet acceptance (default)"
+  ansible.posix.sysctl:
+    name: net.ipv4.conf.default.accept_source_route
+    value: "0"
+    sysctl_file: /etc/sysctl.d/99-cis-hardening.conf
+    state: present
+    reload: true
+  when: disable_source_route_acceptance
+  notify: reload sysctl
+
+- name: "SECTION 3 | CIS-3.2.2 | Disable accepting ICMP redirects (all)"
+  ansible.posix.sysctl:
+    name: net.ipv4.conf.all.accept_redirects
+    value: "0"
+    sysctl_file: /etc/sysctl.d/99-cis-hardening.conf
+    state: present
+    reload: true
+  when: disable_icmp_redirects
+  register: result_icmp_redirects
+  notify: reload sysctl
+
+- name: "SECTION 3 | CIS-3.2.2 | Disable accepting ICMP redirects (default)"
+  ansible.posix.sysctl:
+    name: net.ipv4.conf.default.accept_redirects
+    value: "0"
+    sysctl_file: /etc/sysctl.d/99-cis-hardening.conf
+    state: present
+    reload: true
+  when: disable_icmp_redirects
+  notify: reload sysctl
+
+- name: "SECTION 3 | CIS-3.2.2 | Disable secure ICMP redirects (all)"
+  ansible.posix.sysctl:
+    name: net.ipv4.conf.all.secure_redirects
+    value: "0"
+    sysctl_file: /etc/sysctl.d/99-cis-hardening.conf
+    state: present
+    reload: true
+  when: disable_icmp_redirects
+  notify: reload sysctl
+
+- name: "SECTION 3 | CIS-3.2.2 | Disable secure ICMP redirects (default)"
+  ansible.posix.sysctl:
+    name: net.ipv4.conf.default.secure_redirects
+    value: "0"
+    sysctl_file: /etc/sysctl.d/99-cis-hardening.conf
+    state: present
+    reload: true
+  when: disable_icmp_redirects
+  notify: reload sysctl
+
+- name: "SECTION 3 | CIS-3.2.8 | Enable TCP SYN cookies to resist SYN flood attacks"
+  ansible.posix.sysctl:
+    name: net.ipv4.tcp_syncookies
+    value: "1"
+    sysctl_file: /etc/sysctl.d/99-cis-hardening.conf
+    state: present
+    reload: true
+  when: enable_tcp_syn_cookies
+  register: result_syn_cookies
+  notify: reload sysctl
+
+- name: "SECTION 3 | CIS-3.2.7 | Enable reverse path filtering (all interfaces)"
+  ansible.posix.sysctl:
+    name: net.ipv4.conf.all.rp_filter
+    value: "1"
+    sysctl_file: /etc/sysctl.d/99-cis-hardening.conf
+    state: present
+    reload: true
+  when: enable_reverse_path_filtering
+  register: result_rp_filter
+  notify: reload sysctl
+
+- name: "SECTION 3 | CIS-3.2.7 | Enable reverse path filtering (default interface)"
+  ansible.posix.sysctl:
+    name: net.ipv4.conf.default.rp_filter
+    value: "1"
+    sysctl_file: /etc/sysctl.d/99-cis-hardening.conf
+    state: present
+    reload: true
+  when: enable_reverse_path_filtering
+  notify: reload sysctl
+
+- name: "SECTION 3 | CIS-3.x | Disable IPv6 (all interfaces)"
+  ansible.posix.sysctl:
+    name: net.ipv6.conf.all.disable_ipv6
+    value: "1"
+    sysctl_file: /etc/sysctl.d/99-cis-hardening.conf
+    state: present
+    reload: true
+  when: disable_ipv6
+  notify: reload sysctl
+
+- name: "SECTION 3 | CIS-3.x | Disable IPv6 (default interface)"
+  ansible.posix.sysctl:
+    name: net.ipv6.conf.default.disable_ipv6
+    value: "1"
+    sysctl_file: /etc/sysctl.d/99-cis-hardening.conf
+    state: present
+    reload: true
+  when: disable_ipv6
+  notify: reload sysctl
+
+- name: "SECTION 3 | REPORT | Append network compliance results"
+  ansible.builtin.set_fact:
+    compliance_results: "{{ compliance_results + [
+      {'id': 'CIS-3.1',   'title': 'IP forwarding disabled',            'status': 'PASS' if not result_ip_forward.failed      else 'FAIL'},
+      {'id': 'CIS-3.2',   'title': 'ICMP redirects disabled',           'status': 'PASS' if not result_icmp_redirects.failed  else 'FAIL'},
+      {'id': 'CIS-3.2',   'title': 'TCP SYN cookies enabled',           'status': 'PASS' if not result_syn_cookies.failed     else 'FAIL'},
+      {'id': 'CIS-3.2',   'title': 'Reverse path filtering enabled',    'status': 'PASS' if not result_rp_filter.failed       else 'FAIL'},
+    ] }}"

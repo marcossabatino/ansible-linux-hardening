@@ -1,0 +1,143 @@
+---
+# CIS Section 5 — SSH Hardening & Access Control
+# lineinfile is used for each SSH directive so that settings already present are
+# updated in-place rather than appended, keeping sshd_config clean and idempotent.
+
+# ─── SSH Hardening (CIS 5.2) ──────────────────────────────────────────────────
+
+- name: "SECTION 5 | CIS-5.2.2 | Enforce SSH Protocol 2"
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?Protocol'
+    line: "Protocol {{ ssh_protocol }}"
+    state: present
+  register: result_ssh_protocol
+  notify: restart sshd
+
+- name: "SECTION 5 | CIS-5.2.8 | Disable root login via SSH"
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?PermitRootLogin'
+    line: "PermitRootLogin {{ ssh_permit_root_login }}"
+    state: present
+  register: result_permit_root
+  notify: restart sshd
+
+- name: "SECTION 5 | CIS-5.2.9 | Disable password authentication (force key-based auth)"
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?PasswordAuthentication'
+    line: "PasswordAuthentication {{ ssh_password_authentication }}"
+    state: present
+  register: result_password_auth
+  notify: restart sshd
+
+- name: "SECTION 5 | CIS-5.2.10 | Set maximum authentication attempts"
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?MaxAuthTries'
+    line: "MaxAuthTries {{ ssh_max_auth_tries }}"
+    state: present
+  notify: restart sshd
+
+- name: "SECTION 5 | CIS-5.2.19 | Set idle session timeout interval"
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?ClientAliveInterval'
+    line: "ClientAliveInterval {{ ssh_client_alive_interval }}"
+    state: present
+  notify: restart sshd
+
+- name: "SECTION 5 | CIS-5.2.19 | Set maximum idle session count before disconnect"
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?ClientAliveCountMax'
+    line: "ClientAliveCountMax {{ ssh_client_alive_count_max }}"
+    state: present
+  notify: restart sshd
+
+- name: "SECTION 5 | CIS-5.2.14 | Set login grace time limit"
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?LoginGraceTime'
+    line: "LoginGraceTime {{ ssh_login_grace_time }}"
+    state: present
+  notify: restart sshd
+
+- name: "SECTION 5 | CIS-5.2.17 | Disable TCP forwarding to prevent SSH tunneling"
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?AllowTcpForwarding'
+    line: "AllowTcpForwarding {{ ssh_allow_tcp_forwarding }}"
+    state: present
+  notify: restart sshd
+
+- name: "SECTION 5 | CIS-5.2.6 | Disable X11 forwarding"
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?X11Forwarding'
+    line: "X11Forwarding {{ ssh_x11_forwarding }}"
+    state: present
+  notify: restart sshd
+
+- name: "SECTION 5 | CIS-5.2.16 | Configure SSH warning banner"
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?Banner'
+    line: "Banner /etc/issue.net"
+    state: present
+  register: result_banner
+  notify: restart sshd
+
+# ─── Password Policy (CIS 5.4) ────────────────────────────────────────────────
+
+- name: "SECTION 5 | CIS-5.4.1 | Set maximum password age in /etc/login.defs"
+  ansible.builtin.lineinfile:
+    path: /etc/login.defs
+    regexp: '^PASS_MAX_DAYS'
+    line: "PASS_MAX_DAYS   {{ password_max_days }}"
+    state: present
+  register: result_pass_max
+
+- name: "SECTION 5 | CIS-5.4.1 | Set minimum password age in /etc/login.defs"
+  ansible.builtin.lineinfile:
+    path: /etc/login.defs
+    regexp: '^PASS_MIN_DAYS'
+    line: "PASS_MIN_DAYS   {{ password_min_days }}"
+    state: present
+  register: result_pass_min
+
+- name: "SECTION 5 | CIS-5.4.1 | Set password expiry warning days in /etc/login.defs"
+  ansible.builtin.lineinfile:
+    path: /etc/login.defs
+    regexp: '^PASS_WARN_AGE'
+    line: "PASS_WARN_AGE   {{ password_warn_age }}"
+    state: present
+
+# ─── PAM Password Quality (CIS 5.3) ──────────────────────────────────────────
+
+- name: "SECTION 5 | CIS-5.3.1 | Install libpam-pwquality for password complexity enforcement"
+  ansible.builtin.package:
+    name: libpam-pwquality
+    state: present
+  register: result_pam_install
+
+- name: "SECTION 5 | CIS-5.3.1 | Set minimum password length in pwquality.conf"
+  ansible.builtin.lineinfile:
+    path: /etc/security/pwquality.conf
+    regexp: '^#?minlen'
+    line: "minlen = {{ password_min_length }}"
+    state: present
+  register: result_pass_minlen
+
+- name: "SECTION 5 | REPORT | Append access control compliance results"
+  ansible.builtin.set_fact:
+    compliance_results: "{{ compliance_results + [
+      {'id': 'CIS-5.2.2',  'title': 'SSH Protocol 2 enforced',               'status': 'PASS' if not result_ssh_protocol.failed else 'FAIL'},
+      {'id': 'CIS-5.2.8',  'title': 'Root login disabled via SSH',            'status': 'PASS' if not result_permit_root.failed  else 'FAIL'},
+      {'id': 'CIS-5.2.9',  'title': 'SSH password authentication disabled',   'status': 'PASS' if not result_password_auth.failed else 'FAIL'},
+      {'id': 'CIS-5.2.16', 'title': 'SSH warning banner configured',          'status': 'PASS' if not result_banner.failed       else 'FAIL'},
+      {'id': 'CIS-5.4.1',  'title': 'Password maximum age set',               'status': 'PASS' if not result_pass_max.failed     else 'FAIL'},
+      {'id': 'CIS-5.4.1',  'title': 'Password minimum age set',               'status': 'PASS' if not result_pass_min.failed     else 'FAIL'},
+      {'id': 'CIS-5.4.1',  'title': 'Password minimum length enforced (PAM)', 'status': 'PASS' if not result_pass_minlen.failed  else 'FAIL'},
+    ] }}"

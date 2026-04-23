@@ -1,0 +1,28 @@
+# SSH private keys — never commit credentials
+*.pem
+*.key
+
+# Terraform state and sensitive files
+*.tfstate
+*.tfstate.backup
+.terraform/
+.terraform.lock.hcl
+terraform.tfvars
+
+# Auto-generated Ansible inventory from Terraform — changes per deploy
+inventory/hosts.ini
+
+# Runtime-generated compliance reports
+reports/*.txt
+reports/*.html
+
+# Python artifacts
+__pycache__/
+*.pyc
+.venv/
+
+# macOS metadata
+.DS_Store
+
+# Ansible retry files
+*.retry

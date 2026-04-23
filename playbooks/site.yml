@@ -1,0 +1,45 @@
+---
+# CIS Ubuntu 22.04 LTS Level 1 Hardening Playbook
+#
+# Usage:
+#   ansible-playbook -i inventory/hosts.ini playbooks/site.yml
+#   ansible-playbook -i inventory/hosts.ini playbooks/site.yml --tags network
+#   ansible-playbook -i inventory/hosts.ini playbooks/site.yml --check
+
+- name: "CIS Level 1 Hardening — All Managed Nodes"
+  hosts: managed_nodes
+  become: true
+  gather_facts: true
+  vars:
+    report_output_dir: "/tmp/cis_reports"
+
+  pre_tasks:
+    - name: "PRE | Assert target OS is Ubuntu >= 20.04"
+      ansible.builtin.assert:
+        that:
+          - ansible_distribution == "Ubuntu"
+          - ansible_distribution_major_version | int >= 20
+        fail_msg: >
+          This playbook requires Ubuntu 20.04 or later.
+          Detected: {{ ansible_distribution }} {{ ansible_distribution_version }}.
+        success_msg: "OS check passed: {{ ansible_distribution }} {{ ansible_distribution_version }}"
+
+    - name: "PRE | Ensure python3 is present on target (raw — before facts)"
+      ansible.builtin.raw: |
+        which python3 || apt-get install -y python3
+      changed_when: false
+
+    - name: "PRE | Update apt package cache (max age 1 hour)"
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+  roles:
+    - role: cis_hardening
+
+  post_tasks:
+    - name: "POST | Print report file locations"
+      ansible.builtin.debug:
+        msg: >
+          Compliance reports fetched to reports/ on the control node.
+          View HTML report: xdg-open reports/cis_report_{{ ansible_hostname }}_*.html

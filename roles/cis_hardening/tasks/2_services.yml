@@ -1,0 +1,31 @@
+---
+# CIS Section 2 — Services
+# Services that are not required increase the attack surface. Each service is
+# stopped and set to disabled. ignore_errors covers machines where the package
+# was never installed — the system is already in the desired state.
+
+- name: "SECTION 2 | CIS-2.x | Stop and disable unnecessary services"
+  ansible.builtin.service:
+    name: "{{ item }}"
+    state: stopped
+    enabled: false
+  loop: "{{ services_to_disable }}"
+  ignore_errors: true
+  register: result_services
+
+- name: "SECTION 2 | CIS-2.1 | Remove insecure legacy network client packages"
+  ansible.builtin.package:
+    name:
+      - telnet
+      - rsh-client
+      - talk
+    state: absent
+  ignore_errors: true
+  register: result_insecure_clients
+
+- name: "SECTION 2 | REPORT | Append services compliance results"
+  ansible.builtin.set_fact:
+    compliance_results: "{{ compliance_results + [
+      {'id': 'CIS-2.x', 'title': 'Unnecessary services stopped and disabled', 'status': 'PASS' if not result_services.failed else 'FAIL'},
+      {'id': 'CIS-2.1', 'title': 'Insecure client packages removed',          'status': 'PASS' if not result_insecure_clients.failed else 'FAIL'},
+    ] }}"

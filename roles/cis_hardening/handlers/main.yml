@@ -1,0 +1,21 @@
+---
+- name: restart sshd
+  ansible.builtin.service:
+    name: sshd
+    state: restarted
+
+- name: restart rsyslog
+  ansible.builtin.service:
+    name: rsyslog
+    state: restarted
+
+- name: restart auditd
+  ansible.builtin.service:
+    name: auditd
+    state: restarted
+
+- name: reload sysctl
+  # --system applies all files in /etc/sysctl.d/ without requiring a reboot
+  ansible.builtin.command:
+    cmd: sysctl --system
+  changed_when: false

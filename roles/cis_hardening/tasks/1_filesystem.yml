@@ -1,0 +1,100 @@
+---
+# CIS Section 1 — Filesystem Configuration
+# Rare kernel filesystem modules are blocked by redirecting modprobe to /bin/true.
+# This prevents accidental or malicious loading without removing the module files.
+
+- name: "SECTION 1 | CIS-1.1.1.1 | Disable cramfs filesystem module"
+  ansible.builtin.lineinfile:
+    path: /etc/modprobe.d/cis_filesystem.conf
+    line: "install cramfs /bin/true"
+    create: true
+    owner: root
+    group: root
+    mode: "0644"
+  when: disable_cramfs
+  register: result_cramfs
+
+- name: "SECTION 1 | CIS-1.1.1.2 | Disable freevxfs filesystem module"
+  ansible.builtin.lineinfile:
+    path: /etc/modprobe.d/cis_filesystem.conf
+    line: "install freevxfs /bin/true"
+    create: true
+    owner: root
+    group: root
+    mode: "0644"
+  when: disable_freevxfs
+  register: result_freevxfs
+
+- name: "SECTION 1 | CIS-1.1.1.3 | Disable jffs2 filesystem module"
+  ansible.builtin.lineinfile:
+    path: /etc/modprobe.d/cis_filesystem.conf
+    line: "install jffs2 /bin/true"
+    create: true
+    owner: root
+    group: root
+    mode: "0644"
+  when: disable_jffs2
+  register: result_jffs2
+
+- name: "SECTION 1 | CIS-1.1.1.4 | Disable hfs filesystem module"
+  ansible.builtin.lineinfile:
+    path: /etc/modprobe.d/cis_filesystem.conf
+    line: "install hfs /bin/true"
+    create: true
+    owner: root
+    group: root
+    mode: "0644"
+  when: disable_hfs
+  register: result_hfs
+
+- name: "SECTION 1 | CIS-1.1.1.5 | Disable hfsplus filesystem module"
+  ansible.builtin.lineinfile:
+    path: /etc/modprobe.d/cis_filesystem.conf
+    line: "install hfsplus /bin/true"
+    create: true
+    owner: root
+    group: root
+    mode: "0644"
+  when: disable_hfsplus
+  register: result_hfsplus
+
+- name: "SECTION 1 | CIS-1.1.1.6 | Disable udf filesystem module"
+  ansible.builtin.lineinfile:
+    path: /etc/modprobe.d/cis_filesystem.conf
+    line: "install udf /bin/true"
+    create: true
+    owner: root
+    group: root
+    mode: "0644"
+  when: disable_udf
+  register: result_udf
+
+- name: "SECTION 1 | CIS-1.7 | Set login warning banner in /etc/issue"
+  ansible.builtin.copy:
+    content: "{{ login_banner }}"
+    dest: /etc/issue
+    owner: root
+    group: root
+    mode: "0644"
+  register: result_issue
+
+- name: "SECTION 1 | CIS-1.7 | Set login warning banner in /etc/issue.net"
+  ansible.builtin.copy:
+    content: "{{ login_banner }}"
+    dest: /etc/issue.net
+    owner: root
+    group: root
+    mode: "0644"
+  register: result_issue_net
+
+- name: "SECTION 1 | REPORT | Append filesystem compliance results"
+  ansible.builtin.set_fact:
+    compliance_results: "{{ compliance_results + [
+      {'id': 'CIS-1.1.1.1', 'title': 'cramfs filesystem disabled',   'status': 'PASS' if not result_cramfs.failed   else 'FAIL'},
+      {'id': 'CIS-1.1.1.2', 'title': 'freevxfs filesystem disabled', 'status': 'PASS' if not result_freevxfs.failed else 'FAIL'},
+      {'id': 'CIS-1.1.1.3', 'title': 'jffs2 filesystem disabled',    'status': 'PASS' if not result_jffs2.failed    else 'FAIL'},
+      {'id': 'CIS-1.1.1.4', 'title': 'hfs filesystem disabled',      'status': 'PASS' if not result_hfs.failed      else 'FAIL'},
+      {'id': 'CIS-1.1.1.5', 'title': 'hfsplus filesystem disabled',  'status': 'PASS' if not result_hfsplus.failed  else 'FAIL'},
+      {'id': 'CIS-1.1.1.6', 'title': 'udf filesystem disabled',      'status': 'PASS' if not result_udf.failed      else 'FAIL'},
+      {'id': 'CIS-1.7',     'title': 'Login banner configured',       'status': 'PASS' if not result_issue.failed    else 'FAIL'},
+    ] }}"

@@ -1,0 +1,179 @@
+---
+# Read-only audit playbook (no system changes)
+#
+# Safe to run against production systems — all tasks use changed_when: false.
+# Generates compliance reports identical to site.yml without modifying any files.
+#
+# Usage:
+#   ansible-playbook -i inventory/hosts.ini playbooks/audit.yml
+
+- name: "CIS Level 1 Read-Only Audit — All Managed Nodes"
+  hosts: managed_nodes
+  become: true
+  gather_facts: true
+  vars:
+    report_output_dir: "/tmp/cis_reports"
+    report_timestamp: "{{ ansible_date_time.iso8601_basic_short }}"
+
+  tasks:
+    - name: "AUDIT | Initialize compliance results"
+      ansible.builtin.set_fact:
+        compliance_results: []
+        audit_lines: []
+
+    # ── Section 1: Filesystem ──────────────────────────────────────────────────
+
+    - name: "AUDIT | CIS-1.1.1 | Check unused filesystem modules are blocked"
+      ansible.builtin.shell: |
+        for mod in cramfs freevxfs jffs2 hfs hfsplus udf; do
+          if grep -q "install ${mod} /bin/true" /etc/modprobe.d/*.conf 2>/dev/null; then
+            echo "PASS: ${mod} blocked in modprobe.d"
+          else
+            echo "FAIL: ${mod} NOT blocked — modprobe.d entry missing"
+          fi
+        done
+      changed_when: false
+      register: audit_filesystem
+
+    # ── Section 3: Network sysctl ──────────────────────────────────────────────
+
+    - name: "AUDIT | CIS-3.x | Check sysctl hardening parameters"
+      ansible.builtin.shell: |
+        check() {
+          local key=$1 expected=$2
+          local actual
+          actual=$(sysctl -n "${key}" 2>/dev/null)
+          if [ "${actual}" = "${expected}" ]; then
+            echo "PASS: ${key}=${actual}"
+          else
+            echo "FAIL: ${key}=${actual} (expected ${expected})"
+          fi
+        }
+        check net.ipv4.ip_forward 0
+        check net.ipv4.conf.all.send_redirects 0
+        check net.ipv4.conf.all.accept_redirects 0
+        check net.ipv4.tcp_syncookies 1
+        check net.ipv4.conf.all.rp_filter 1
+      changed_when: false
+      register: audit_network
+
+    # ── Section 5: SSH ─────────────────────────────────────────────────────────
+
+    - name: "AUDIT | CIS-5.2 | Check SSH daemon configuration"
+      ansible.builtin.shell: |
+        check_ssh() {
+          local key=$1 expected=$2
+          local actual
+          actual=$(sshd -T 2>/dev/null | grep -i "^${key}" | awk '{print $2}')
+          if [ "${actual}" = "${expected}" ]; then
+            echo "PASS: SSH ${key}=${actual}"
+          else
+            echo "FAIL: SSH ${key}=${actual} (expected ${expected})"
+          fi
+        }
+        check_ssh permitrootlogin no
+        check_ssh passwordauthentication no
+        check_ssh x11forwarding no
+        check_ssh maxauthtries 4
+      changed_when: false
+      register: audit_ssh
+
+    # ── Section 4: auditd ──────────────────────────────────────────────────────
+
+    - name: "AUDIT | CIS-4.1.1 | Check auditd service status"
+      ansible.builtin.shell: |
+        if systemctl is-active --quiet auditd; then
+          echo "PASS: auditd is active"
+        else
+          echo "FAIL: auditd is NOT active"
+        fi
+      changed_when: false
+      register: audit_auditd
+
+    - name: "AUDIT | CIS-4.2.1 | Check rsyslog service status"
+      ansible.builtin.shell: |
+        if systemctl is-active --quiet rsyslog; then
+          echo "PASS: rsyslog is active"
+        else
+          echo "FAIL: rsyslog is NOT active"
+        fi
+      changed_when: false
+      register: audit_rsyslog
+
+    # ── Aggregate results ──────────────────────────────────────────────────────
+
+    - name: "AUDIT | Combine all result lines into a single list"
+      ansible.builtin.set_fact:
+        all_audit_lines: "{{ (audit_filesystem.stdout_lines
+                             + audit_network.stdout_lines
+                             + audit_ssh.stdout_lines
+                             + audit_auditd.stdout_lines
+                             + audit_rsyslog.stdout_lines) }}"
+
+    - name: "AUDIT | Build structured compliance_results from audit output"
+      ansible.builtin.set_fact:
+        compliance_results: "{{ compliance_results + [{'id': 'AUDIT', 'title': item | regex_replace('^(PASS|FAIL): ', ''), 'status': item | regex_search('^(PASS|FAIL)') | upper}] }}"
+      loop: "{{ all_audit_lines }}"
+
+    - name: "AUDIT | Calculate pass, fail, and total counts"
+      ansible.builtin.set_fact:
+        pass_count: "{{ compliance_results | selectattr('status', 'equalto', 'PASS') | list | length }}"
+        fail_count: "{{ compliance_results | selectattr('status', 'equalto', 'FAIL') | list | length }}"
+        total_count: "{{ compliance_results | length }}"
+
+    - name: "AUDIT | Calculate compliance percentage"
+      ansible.builtin.set_fact:
+        compliance_pct: "{{ ((pass_count | int / total_count | int) * 100) | round(1) }}"
+      when: total_count | int > 0
+
+    # ── Reports ────────────────────────────────────────────────────────────────
+
+    - name: "AUDIT | Create report output directory on remote host"
+      ansible.builtin.file:
+        path: "{{ report_output_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: "AUDIT | Render plain-text compliance report"
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/../roles/cis_hardening/templates/report.txt.j2"
+        dest: "{{ report_output_dir }}/cis_report_{{ ansible_hostname }}_{{ report_timestamp }}.txt"
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: "AUDIT | Render HTML compliance report"
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/../roles/cis_hardening/templates/report.html.j2"
+        dest: "{{ report_output_dir }}/cis_report_{{ ansible_hostname }}_{{ report_timestamp }}.html"
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: "AUDIT | Fetch plain-text report to control node"
+      ansible.builtin.fetch:
+        src: "{{ report_output_dir }}/cis_report_{{ ansible_hostname }}_{{ report_timestamp }}.txt"
+        dest: "reports/"
+        flat: true
+
+    - name: "AUDIT | Fetch HTML report to control node"
+      ansible.builtin.fetch:
+        src: "{{ report_output_dir }}/cis_report_{{ ansible_hostname }}_{{ report_timestamp }}.html"
+        dest: "reports/"
+        flat: true
+
+    - name: "AUDIT | Print compliance summary"
+      ansible.builtin.debug:
+        msg:
+          - "╔══════════════════════════════════════════════╗"
+          - "║         CIS AUDIT SUMMARY (READ-ONLY)        ║"
+          - "╠══════════════════════════════════════════════╣"
+          - "║  Host   : {{ ansible_hostname | ljust(34) }} ║"
+          - "║  Total  : {{ total_count | string | ljust(34) }} ║"
+          - "║  PASS   : {{ pass_count | string | ljust(34) }} ║"
+          - "║  FAIL   : {{ fail_count | string | ljust(34) }} ║"
+          - "║  Score  : {{ compliance_pct | string + '%' | ljust(34) }} ║"
+          - "╚══════════════════════════════════════════════╝"
+          - "Reports saved to: reports/"

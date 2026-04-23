@@ -1,0 +1,45 @@
+---
+- name: "ALWAYS | Gather host facts for report and conditional tasks"
+  ansible.builtin.setup:
+  tags: always
+
+- name: "ALWAYS | Initialize empty compliance results list"
+  ansible.builtin.set_fact:
+    compliance_results: []
+  tags: always
+
+- name: "SECTION 1 | CIS 1.x | Filesystem configuration"
+  ansible.builtin.import_tasks: 1_filesystem.yml
+  tags:
+    - filesystem
+    - cis_1
+
+- name: "SECTION 2 | CIS 2.x | Unnecessary services and insecure clients"
+  ansible.builtin.import_tasks: 2_services.yml
+  tags:
+    - services
+    - cis_2
+
+- name: "SECTION 3 | CIS 3.x | Network and kernel sysctl hardening"
+  ansible.builtin.import_tasks: 3_network.yml
+  tags:
+    - network
+    - cis_3
+
+- name: "SECTION 4 | CIS 4.x | Logging and auditing"
+  ansible.builtin.import_tasks: 4_logging.yml
+  tags:
+    - logging
+    - cis_4
+
+- name: "SECTION 5 | CIS 5.x | SSH hardening and access control"
+  ansible.builtin.import_tasks: 5_access_control.yml
+  tags:
+    - access
+    - cis_5
+
+- name: "SECTION 6 | REPORT | Generate compliance reports"
+  ansible.builtin.import_tasks: 6_report.yml
+  tags:
+    - always
+    - report

@@ -1,0 +1,35 @@
+================================================================================
+CIS BENCHMARK HARDENING REPORT — LEVEL 1 (Ubuntu 22.04 LTS)
+================================================================================
+Host          : {{ ansible_hostname }}
+IP Address    : {{ ansible_default_ipv4.address | default('N/A') }}
+OS            : {{ ansible_distribution }} {{ ansible_distribution_version }}
+Kernel        : {{ ansible_kernel }}
+Date          : {{ ansible_date_time.iso8601 }}
+================================================================================
+
+COMPLIANCE SUMMARY
+──────────────────
+  Total Checks : {{ total_count }}
+  PASS         : {{ pass_count }}
+  FAIL         : {{ fail_count }}
+  Score        : {{ compliance_pct }}%
+  Status       : {% if compliance_pct | float >= 80 %}✔  COMPLIANT{% elif compliance_pct | float >= 60 %}⚠  PARTIALLY COMPLIANT — remediation required{% else %}✘  NON-COMPLIANT — immediate action required{% endif %}
+
+
+================================================================================
+DETAILED RESULTS
+================================================================================
+{% for result in compliance_results %}
+  [{{ result.status }}]  {{ result.id | ljust(14) }} {{ result.title }}
+{% endfor %}
+
+================================================================================
+NOTES
+================================================================================
+- This report covers CIS Ubuntu Linux 22.04 LTS Benchmark Level 1 controls.
+- Review failed controls manually before enforcing in production.
+- Re-run with: ansible-playbook -i inventory/hosts.ini playbooks/site.yml
+================================================================================
+END OF REPORT
+================================================================================

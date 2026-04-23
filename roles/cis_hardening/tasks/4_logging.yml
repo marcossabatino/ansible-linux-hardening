@@ -1,0 +1,79 @@
+---
+# CIS Section 4 — Logging & Auditing
+# auditd captures security-relevant kernel events; rsyslog ships them to a
+# central log server in production. Both are required for CIS Level 1.
+
+- name: "SECTION 4 | CIS-4.1.1 | Install auditd package"
+  ansible.builtin.package:
+    name: auditd
+    state: present
+  register: result_auditd_install
+
+- name: "SECTION 4 | CIS-4.1.1 | Enable and start auditd service"
+  ansible.builtin.service:
+    name: auditd
+    state: started
+    enabled: true
+  when: auditd_enabled
+  register: result_auditd_service
+
+- name: "SECTION 4 | CIS-4.1.x | Deploy CIS audit rules"
+  ansible.builtin.copy:
+    dest: /etc/audit/rules.d/cis_hardening.rules
+    owner: root
+    group: root
+    mode: "0640"
+    content: |
+      # CIS Benchmark audit rules
+      # Time changes
+      -a always,exit -F arch=b64 -S adjtimex -S settimeofday -k time-change
+      -a always,exit -F arch=b32 -S adjtimex -S settimeofday -S stime -k time-change
+      # User/group modifications
+      -w /etc/group  -p wa -k identity
+      -w /etc/passwd -p wa -k identity
+      -w /etc/shadow -p wa -k identity
+      -w /etc/sudoers -p wa -k identity
+      # Network environment changes
+      -a always,exit -F arch=b64 -S sethostname -S setdomainname -k system-locale
+      # File deletion events
+      -a always,exit -F arch=b64 -S unlink -S unlinkat -S rename -S renameat -F auid>=1000 -F auid!=4294967295 -k delete
+      # Sudo usage
+      -w /var/log/sudo.log -p wa -k actions
+      # Kernel module loading
+      -w /sbin/insmod  -p x -k modules
+      -w /sbin/rmmod   -p x -k modules
+      -w /sbin/modprobe -p x -k modules
+  register: result_audit_rules
+  notify: restart auditd
+
+- name: "SECTION 4 | CIS-4.2.1 | Install rsyslog package"
+  ansible.builtin.package:
+    name: rsyslog
+    state: present
+  register: result_rsyslog_install
+
+- name: "SECTION 4 | CIS-4.2.1 | Enable and start rsyslog service"
+  ansible.builtin.service:
+    name: rsyslog
+    state: started
+    enabled: true
+  when: rsyslog_enabled
+  register: result_rsyslog_service
+
+- name: "SECTION 4 | CIS-4.2.4 | Set rsyslog file creation permissions to 0640"
+  ansible.builtin.lineinfile:
+    path: /etc/rsyslog.conf
+    regexp: '^\$FileCreateMode'
+    line: '$FileCreateMode 0640'
+    state: present
+  register: result_rsyslog_perms
+  notify: restart rsyslog
+
+- name: "SECTION 4 | REPORT | Append logging compliance results"
+  ansible.builtin.set_fact:
+    compliance_results: "{{ compliance_results + [
+      {'id': 'CIS-4.1.1', 'title': 'auditd installed and enabled',      'status': 'PASS' if not result_auditd_install.failed  else 'FAIL'},
+      {'id': 'CIS-4.1.x', 'title': 'CIS audit rules configured',        'status': 'PASS' if not result_audit_rules.failed     else 'FAIL'},
+      {'id': 'CIS-4.2.1', 'title': 'rsyslog installed and enabled',     'status': 'PASS' if not result_rsyslog_install.failed else 'FAIL'},
+      {'id': 'CIS-4.2.4', 'title': 'rsyslog file permissions set 0640', 'status': 'PASS' if not result_rsyslog_perms.failed   else 'FAIL'},
+    ] }}"
